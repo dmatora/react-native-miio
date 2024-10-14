@@ -1,6 +1,7 @@
-import Packet, { PacketDataRequired } from "./packet";
-import { ProtocolError } from "./errors";
-import { hash, encrypt, decrypt } from "./crypto";
+import Packet, { PacketDataRequired } from './packet';
+import { ProtocolError } from './errors';
+import {hash, encrypt, decrypt, toBuffer} from './crypto';
+import { Buffer } from 'buffer';
 
 export type Request<ParamsType = any> = {
     id: number;
@@ -8,16 +9,18 @@ export type Request<ParamsType = any> = {
     params?: ParamsType | [];
 };
 
-export type Response<ResultType = any> = {
-    id: number;
-    result: ResultType;
-} | {
-    id: number;
-    error: {
-        code: number;
-        message: string;
-    };
-};
+export type Response<ResultType = any> =
+    | {
+          id: number;
+          result: ResultType;
+      }
+    | {
+          id: number;
+          error: {
+              code: number;
+              message: string;
+          };
+      };
 
 class Protocol {
     static HANDSHAKE_PACKET: Packet = new Packet(
@@ -49,36 +52,27 @@ class Protocol {
     }
 
     /**
-     * Checks if `Packet` is handshake packet.
+     * Checks if  is handshake packet.
      *
-     * @param packet - `Packet` to check
-     * @returns `true` if packet is handshake packet and `false` otherwise
+     * @param packet -  to check
+     * @returns  if packet is handshake packet and  otherwise
      */
     static isHandshake(packet: Packet): boolean {
         return packet.length === Packet.HEADER_SIZE;
     }
 
-    /**
-     * Returns ready to send `Packet` for the given `Request`.
-     *
-     * @param req - request
-     * @param req.id - random int
-     * @param req.method - device method to call
-     * @param req.params - method params
-     * @param timestamp - device timestamp
-     * @returns `Packet` for the given `req` and `timestamp`
-     */
     packRequest<ParamsType>(req: Request<ParamsType>, timestamp: number): Packet {
-        // If no params, set default to []
+        // Ensure params are handled as buffer-compatible data types
         const payload = {
             ...req,
             params: req.params || [],
         };
 
-        const data = Buffer.from(JSON.stringify(payload) + "\x00");
+        // Convert payload to a buffer before encryption
+        const data = toBuffer(JSON.stringify(payload) + '\x00');
         const encryptedData = encrypt(this.key, this.iv, data);
 
-        // Fields required to calculate checksum
+        // Pack the request into a packet
         const fields: PacketDataRequired = {
             deviceId: this.deviceId,
             timestamp: timestamp,
@@ -94,10 +88,10 @@ class Protocol {
     }
 
     /**
-     * Extracts device response from `Packet`.
+     * Extracts device response from .
      *
-     * @param packet - response `Packet`
-     * @returns `Response` extracted from the given `packet`
+     * @param packet - response
+     * @returns  extracted from the given
      */
     unpackResponse<ResultType>(packet: Packet): Response<ResultType> {
         if (!this.validateChecksum(packet)) {
@@ -111,10 +105,10 @@ class Protocol {
     }
 
     /**
-     * Calculates a checksum for the given `Packet`.
+     * Calculates a checksum for the given .
      *
-     * @param fields - `Packet` fields required for checksum calculation.
-     * @returns checksum for `Packet` constructed from `fields`
+     * @param fields -  fields required for checksum calculation.
+     * @returns checksum for  constructed from
      */
     private calcChecksum(fields: Omit<PacketDataRequired, 'checksum'>): Buffer {
         // Build dummy packet with token in "checksum" field
@@ -128,10 +122,10 @@ class Protocol {
     }
 
     /**
-     * Validates checksum of the given `Packet`.
+     * Validates checksum of the given .
      *
-     * @param packet - `Packet` to validate
-     * @returns `true` if checksum is correct and `false` otherwise
+     * @param packet -  to validate
+     * @returns  if checksum is correct and  otherwise
      */
     private validateChecksum(packet: Packet): boolean {
         const { checksum: actual, ...fields } = packet;

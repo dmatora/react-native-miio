@@ -1,4 +1,5 @@
-import { ProtocolError } from "./errors";
+import { ProtocolError } from './errors';
+import { Buffer } from 'buffer';
 
 export type PacketData = {
     magic: number;
@@ -13,7 +14,7 @@ export type PacketData = {
 export type PacketDataRequired = Omit<PacketData, 'magic' | 'size' | 'unknown'>;
 
 class Packet {
-    static MAGIC: number = 0x2131;
+    static MAGIC = 0x2131;
     static OFFSETS = {
         MAGIC: 0,
         SIZE: 2,
@@ -23,8 +24,8 @@ class Packet {
         CHECKSUM: 16,
         DATA: 32,
     };
-    static HEADER_SIZE: number = 32;
-    static CHECKSUM_SIZE: number = 16;
+    static HEADER_SIZE = 32;
+    static CHECKSUM_SIZE = 16;
 
     unknown: number;
     deviceId: number;
@@ -33,9 +34,9 @@ class Packet {
     data: Buffer;
 
     /**
-     * Represent miIO protocol `Packet`.
+     * Represent miIO protocol .
      *
-     * @param fields - fields required to build a `Packet`
+     * @param fields - fields required to build a 
      * @param unknown - "unknown" field of packet (0xffffffff for handshake and 0 for any other packet)
      */
     constructor(fields: PacketDataRequired, unknown = 0) {
@@ -47,10 +48,10 @@ class Packet {
     }
 
     /**
-     * Parses binary `Buffer` into a `Packet`.
+     * Parses binary  into a .
      *
-     * @param buf - `Buffer` to parse
-     * @returns `Packet` parsed from `buf`
+     * @param buf -  to parse
+     * @returns  parsed from 
      */
     static fromBuffer(buf: Buffer): Packet {
         const magic = buf.readUInt16BE(Packet.OFFSETS.MAGIC);
@@ -73,22 +74,22 @@ class Packet {
         const checksum = buf.slice(Packet.OFFSETS.CHECKSUM, Packet.OFFSETS.DATA);
         const data = buf.slice(Packet.OFFSETS.DATA);
 
-        return new Packet({ deviceId, timestamp, checksum, data });
+        return new Packet({ deviceId, timestamp, checksum, data }, unknown);
     }
 
     /**
-     * Returns `Packet` length.
+     * Returns  length.
      *
-     * @returns `Packet` length in bytes
+     * @returns  length in bytes
      */
     get length(): number {
         return Packet.HEADER_SIZE + this.data.byteLength;
     }
 
     /**
-     * Packs `Packet` into a `Buffer`.
+     * Packs  into a .
      *
-     * @returns `Buffer` with `Packet` data
+     * @returns  with  data
      */
     toBuffer(): Buffer {
         const buf = Buffer.alloc(this.length);

@@ -14,7 +14,7 @@ export function randomInt(): number {
  * @returns random string of length `n`
  */
 export function randomString(n = 8): string {
-    return [...Array(n)].map(() => Math.random().toString(36)[2]).join("");
+    return [...Array(n)].map(() => Math.random().toString(36)[2]).join('');
 }
 
 /**

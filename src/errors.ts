@@ -4,6 +4,7 @@
 export class ProtocolError extends Error {
     constructor(message: string) {
         super(message);
+        this.name = 'ProtocolError';
     }
 }
 
@@ -13,6 +14,7 @@ export class ProtocolError extends Error {
 export class DeviceError extends Error {
     constructor(message: string) {
         super(message);
+        this.name = 'DeviceError';
     }
 }
 
@@ -22,5 +24,6 @@ export class DeviceError extends Error {
 export class SocketError extends Error {
     constructor(message: string) {
         super(message);
+        this.name = 'SocketError';
     }
 }

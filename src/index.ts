@@ -1,5 +1,5 @@
-import Device from "./device";
-import { SocketError, DeviceError, ProtocolError } from "./errors";
+import Device from './device';
+import { SocketError, DeviceError, ProtocolError } from './errors';
 
 const device = Device.discover;
 

@@ -1,4 +1,27 @@
-import crypto from 'crypto';
+import crypto from 'react-native-quick-crypto';
+import {Buffer} from 'buffer';
+
+/**
+ * Converts data returned from crypto methods to a Buffer.
+ *
+ * @param data - Data to convert
+ * @returns A Buffer containing the data
+ */
+export function toBuffer(data: any): Buffer {
+  if (Buffer.isBuffer(data)) {
+    return data;
+  }
+  if (data instanceof ArrayBuffer) {
+    return Buffer.from(new Uint8Array(data));
+  }
+  if (data instanceof Uint8Array) {
+    return Buffer.from(data);
+  }
+  if (typeof data === 'string') {
+    return Buffer.from(data, 'utf-8');
+  }
+  throw new Error('Unsupported data type');
+}
 
 /**
  * Returns md5 hash of data.
@@ -7,31 +30,19 @@ import crypto from 'crypto';
  * @returns The md5 hash of `data` (16 bytes)
  */
 export function hash(data: Buffer): Buffer {
-    return crypto.createHash("md5").update(data).digest();
+  return crypto.createHash('md5').update(data).digest();
 }
 
-/**
- * Encrypts data with AES-128-CBC using provided key and iv.
- *
- * @param key - encryption key (16 bytes)
- * @param iv - initialization vector (16 bytes)
- * @param data - data to encrypt
- * @returns `data` encrypted with AES-128-CBC using provided `key` and `iv`.
- */
-export function encrypt(key: Buffer, iv: Buffer, data: Buffer): Buffer {
-    const cipher = crypto.createCipheriv("aes-128-cbc", key, iv);
-    return Buffer.concat([cipher.update(data), cipher.final()]);
+export function encrypt(key: Buffer, iv: Buffer, data: any): Buffer {
+  const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
+
+  // Use toBuffer() to convert the data before encryption
+  return Buffer.concat([cipher.update(toBuffer(data)), cipher.final()]);
 }
 
-/**
- * Decrypts AES-128-CBC encrypted data using provided key and iv.
- *
- * @param key - encryption key (16 bytes)
- * @param iv - initialization vector (16 bytes)
- * @param data - data to decrypt (length = 16 * n)
- * @returns decrypted `data`.
- */
-export function decrypt(key: Buffer, iv: Buffer, data: Buffer): Buffer {
-    const decipher = crypto.createDecipheriv("aes-128-cbc", key, iv);
-    return Buffer.concat([decipher.update(data), decipher.final()]);
+export function decrypt(key: Buffer, iv: Buffer, data: any): Buffer {
+  const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+
+  // Use toBuffer() to convert the data before decryption
+  return Buffer.concat([decipher.update(toBuffer(data)), decipher.final()]);
 }
