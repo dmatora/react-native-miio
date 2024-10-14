@@ -1,11 +1,11 @@
-import dgram from "dgram";
-import { SocketError } from "./errors";
+import dgram from 'react-native-udp';
+import { SocketError } from './errors';
+import { Buffer } from 'buffer';
 
 class Socket {
     ip: string;
     port: number;
-    version: number;
-    socket: dgram.Socket;
+    socket: any;
     private connectPromise: Promise<void> | null;
 
     /**
@@ -17,47 +17,17 @@ class Socket {
     constructor(ip: string, port: number) {
         this.ip = ip;
         this.port = port;
-        this.socket = dgram.createSocket("udp4");
-        this.version = parseInt(process.versions.node.split(".")[0]);
+        this.socket = dgram.createSocket({ type: 'udp4' });
         this.connectPromise = null;
-    }
 
-    /**
-     * Checks if socket is connected.
-     *
-     * @returns `true` if socket is connected and `false` otherwise
-     */
-    private isConnected(): boolean {
-        try {
-            // For Node.js versions >=12, remoteAddress() method exists.
-            // We'll use type assertion since TypeScript might not recognize it.
-            (this.socket as any).remoteAddress();
-            return true;
-        } catch (err) {
-            return false;
-        }
-    }
-
-    /**
-     * Connects socket to the provided IP and port.
-     *
-     * @returns `Promise` which will be resolved when socket is connected
-     *
-     * @remarks
-     * If called simultaneously, connects only once and returns the same promise for
-     * all callers
-     */
-    private connect(): Promise<void> {
-        if (!this.connectPromise) {
-            this.connectPromise = new Promise<void>((resolve) => {
-                this.socket.connect(this.port, this.ip, () => {
-                    resolve();
-                });
-            }).finally(() => {
-                this.connectPromise = null;
-            });
-        }
-        return this.connectPromise;
+        // Bind the socket to a local port
+        this.socket.bind(0, (err: Error) => {
+            if (err) {
+                console.error('Error binding socket:', err);
+            } else {
+                console.log('Socket bound to port:', this.socket.address().port);
+            }
+        });
     }
 
     /**
@@ -72,7 +42,7 @@ class Socket {
      * @param parse - parse function
      * @param match - match function (checks if response matches the request)
      * @param timeout - response timeout
-     * @returns `Promise` which will be resolved when matched response come or
+     * @returns `Promise` which will be resolved when matched response comes or
      *    rejected in case of error or timeout
      */
     async send<ResponseType>(
@@ -81,24 +51,16 @@ class Socket {
         match: (data: ResponseType) => boolean,
         timeout: number = 5000
     ): Promise<ResponseType> {
-        // `connect` function was added in v12 of NodeJS.
-        // https://nodejs.org/api/dgram.html#dgram_socket_connect_port_address_callback
-        if (this.version >= 12) {
-            if (!this.isConnected()) {
-                await this.connect();
-            }
-        }
-
         let timer: NodeJS.Timeout | undefined;
-        let onMessage: (msg: Buffer, rinfo: dgram.RemoteInfo) => void;
+        let onMessage: (msg: Buffer, rinfo: any) => void;
         let onError: (err: Error) => void;
 
         const done = (onFinish: () => void): void => {
             if (timer) {
                 clearTimeout(timer);
             }
-            this.socket.removeListener("message", onMessage);
-            this.socket.removeListener("error", onError);
+            this.socket.removeListener('message', onMessage);
+            this.socket.removeListener('error', onError);
             onFinish();
         };
 
@@ -111,7 +73,6 @@ class Socket {
                     }
                 } catch (err) {
                     done(() => reject(err));
-                    return;
                 }
             };
 
@@ -121,26 +82,18 @@ class Socket {
 
             if (timeout) {
                 timer = setTimeout(() => {
-                    done(() => reject(new SocketError("Timeout")));
+                    done(() => reject(new SocketError('Timeout')));
                 }, timeout);
             }
 
-            this.socket.on("message", onMessage);
-            this.socket.on("error", onError);
+            this.socket.on('message', onMessage);
+            this.socket.on('error', onError);
 
-            const callback = (err: Error | null) => {
+            this.socket.send(data, 0, data.length, this.port, this.ip, (err: Error | null) => {
                 if (err) {
                     onError(err);
                 }
-            };
-
-            if (this.version >= 12) {
-                this.socket.send(data, callback);
-            } else {
-                // Older NodeJS versions don't have "connected UDP socket",
-                // so we need to pass address and port.
-                this.socket.send(data, this.port, this.ip, callback);
-            }
+            });
         });
 
         return resultPromise;
